@@ -1,9 +1,17 @@
 # AiO NOTES
-Android rich-text notebook by INFEND.
+All in One Notes — Android by INFEND.
 
-## Build
+## Build and release
 JDK 17, Android SDK 35, Gradle 8.9. Run gradle :app:assembleDebug.
-For a signed release, add repository Actions secret AIO_SIGNING_BUNDLE (Base64 ZIP containing release.p12 and password.txt). Run the Release workflow manually after adding the secret. Subsequent pushes to main also trigger it.
+Signed releases use repository Actions secret AIO_SIGNING_BUNDLE (Base64 ZIP containing release.p12 and password.txt). Pushes to main trigger the Release workflow. Release assets are AiO-NOTES.apk and update.json.
 
-## First implementation
-Local notes, rich text, checklists, images, search, pinning, 24 accent colors, JSON backup/restore via Android document picker, Android cloud backup where enabled, signed OTA manifest and install flow. Platform spell checker availability depends on installed spell-check service. Full Google account multi-device sync, comprehensive Russian/English grammar, advanced document/PDF editing are not implemented.
+## Implemented in source
+- AMOLED editor with 24 accent colors, rich formatting, headings, lists, checkboxes, images, tables, quotations and basic code highlighting.
+- Local atomic storage, search, pinned notes, folders, tags, trash with deletion markers, limited revision history.
+- JSON backup/restore, TXT and HTML export, Android print/PDF.
+- Optional synchronization through one user-selected writable document using Android Storage Access Framework (e.g. Google Drive where supported). Foreground polling, timestamp merge and deletion markers. This is not OAuth account integration or a conflict-safe real-time sync service; simultaneous edits can conflict.
+- Platform spell-check service for Russian/English when available, local basic spelling/punctuation rules. No full linguistic grammar engine.
+- Signed OTA manifest, resumable HTTP range downloads where supported, SHA-256 and APK signer verification, system installer.
+- No full PDF editing, DOCX export or biometric vault yet.
+
+Android runtime and provider compatibility require testing on a real device.
