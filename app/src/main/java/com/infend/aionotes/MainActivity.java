@@ -14,6 +14,12 @@ import android.view.WindowInsets;
 import android.view.inputmethod.InputMethodManager;
 import android.view.textservice.*;
 import androidx.core.content.FileProvider;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.graphics.Insets;
+import android.widget.FrameLayout;
+import android.view.ViewGroup;
 import org.json.*;
 import java.io.*;
 import java.net.*;
@@ -36,6 +42,7 @@ public class MainActivity extends Activity {
     private File pendingApk;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(0xff000000);
         getWindow().setNavigationBarColor(0xff000000);
         store=new AtomicFile(new File(getFilesDir(),"notes.json"));
@@ -52,14 +59,19 @@ public class MainActivity extends Activity {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r){return true;}
             @Override public boolean shouldOverrideUrlLoading(WebView v,String u){return true;}
         });
-        setContentView(web);
-        if(android.os.Build.VERSION.SDK_INT>=35) {
-            web.setOnApplyWindowInsetsListener((v,insets)->{
-                android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
-                android.graphics.Insets ime=insets.getInsets(WindowInsets.Type.ime());
-                v.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,ime.bottom));return insets;
-            });
-        }
+        FrameLayout root=new FrameLayout(this);
+        root.setBackgroundColor(0xff000000);
+        root.addView(web,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
+        ViewCompat.setOnApplyWindowInsetsListener(root,(v,insets)->{
+            Insets bars=insets.getInsets(WindowInsetsCompat.Type.systemBars()|WindowInsetsCompat.Type.displayCutout());
+            Insets ime=insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,ime.bottom));
+            return WindowInsetsCompat.CONSUMED;
+        });
+        WindowCompat.getInsetsController(getWindow(),root).setAppearanceLightStatusBars(false);
+        WindowCompat.getInsetsController(getWindow(),root).setAppearanceLightNavigationBars(false);
+        setContentView(root);
+        ViewCompat.requestApplyInsets(root);
         web.loadUrl("file:///android_asset/index.html");
     }
     private void call(String method,String value){runOnUiThread(()->web.evaluateJavascript("window."+method+"("+JSONObject.quote(value)+")",null));}
@@ -85,6 +97,7 @@ public class MainActivity extends Activity {
         startActivityForResult(i,code);
     }
     public class Bridge{
+        @JavascriptInterface public void exitApp(){runOnUiThread(()->finish());}
         @JavascriptInterface public String load(){return loadNotes();}
         @JavascriptInterface public boolean save(String s){return saveNotes(s);}
         @JavascriptInterface public String accent(){return getPreferences(0).getString("accent","#80D8FF");}
