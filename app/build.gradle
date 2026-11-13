@@ -1,0 +1,35 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.infend.aionotes'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.infend.aionotes'
+        minSdk 26
+        targetSdk 35
+        versionCode (project.findProperty('releaseCode') ?: '1').toInteger()
+        versionName (project.findProperty('releaseName') ?: '1.0.0').toString()
+    }
+    signingConfigs {
+        release {
+            def path = System.getenv('AIO_KEYSTORE')
+            if (path) {
+                storeFile file(path)
+                storePassword System.getenv('AIO_PASSWORD')
+                keyAlias 'aio-notes'
+                keyPassword System.getenv('AIO_PASSWORD')
+                storeType 'PKCS12'
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (System.getenv('AIO_KEYSTORE')) signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+dependencies { implementation 'androidx.core:core:1.15.0' }
