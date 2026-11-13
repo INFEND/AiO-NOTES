@@ -59,14 +59,14 @@ test('table dimensions strictly validated; header optional; exactly one paramete
  assert.equal((withHeader.match(/<th>/g)||[]).length,4);
  assert.equal((withHeader.match(/<td>/g)||[]).length,8);
  assert.equal((ctx.tableMarkup(2,2,false).match(/<td>/g)||[]).length,4);
- assert.match(js,/const p=await tableParameters\(\);if\(p\)cmd/);
+ assert.match(js,/const p=await tableParameters\(\);if\(p\)insertTable\(p,bookmark,noteId\)/);
  assert.doesNotMatch(js,/await dialog\('Количество (строк|столбцов)/);
 });
 test('table deletion is explicit, scoped and saves after removal',()=>{
  assert.match(html,/id="tableDelete"/);
  assert.match(js,/askConfirm\('Удалить таблицу\?'/);
  assert.match(js,/if\(!table\|\|!editor.contains\(table\)\)return false/);
- assert.match(js,/range.selectNode\(table\)/);
+ assert.match(js,/editor.insertBefore\(template.content,anchor\)/);
  assert.match(js,/table.remove\(\)/);
  assert.match(js,/capture\(\);dirty\(\);saveCurrent\(\);return true/);
 });

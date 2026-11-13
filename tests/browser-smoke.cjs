@@ -17,11 +17,12 @@ const checks=String.raw`<script>
   place(editor,editor.childNodes.length,editor.childNodes.length);
   document.querySelector('[data-group="insert"]').click();document.querySelector('[data-extra="table"]').click();
   assert($('tableDialog').open,'Table modal missing');$('tableRows').value='2';$('tableCols').value='3';$('tableRows').dispatchEvent(new Event('input'));$('tableApply').click();await tick();
-  const table=editor.querySelector('table');assert(table&&table.rows.length===2&&table.rows[0].cells.length===3,'Table insertion failed');
+  const table=editor.querySelector('table');assert(table&&table.rows.length===2&&table.rows[0].cells.length===3,'Table insertion failed: '+editor.innerHTML.slice(0,700));
   const cell=table.rows[1].cells[1];place(cell,0,0);cell.dispatchEvent(new MouseEvent('click',{bubbles:true}));assert(!$('tableTools').hidden,'Table context missing');
   $('tableDelete').click();assert($('confirmDialog').open,'Delete confirmation missing');$('confirmCancel').click();await tick();assert(editor.contains(table),'Cancel deleted table');
   place(cell,0,0);$('tableDelete').click();$('confirmApply').click();await tick();assert(!editor.querySelector('table'),'Table delete failed');assert(editor.textContent.includes('Тест редактора'),'Nearby text lost');
   saveCurrent();assert(!JSON.parse(window.lastSaved).find(n=>n.id===current.id).html.includes('<table>'),'Deleted table persisted');
+  place(editor,editor.childNodes.length,editor.childNodes.length);document.querySelector('[data-extra="table"]').click();$('tableCancel').click();await tick();assert(!editor.querySelector('table'),'Cancelled table inserted');
   let p=dialog('Адрес','https://','url');$('dialogCancel').click();assert(await p===null,'Invalid URL cancel failed');
   result.dataset.result='pass';result.textContent='Editor browser smoke tests passed';
  }catch(e){result.dataset.result='fail';result.textContent=String(e&&e.stack||e);}
