@@ -1,4 +1,5 @@
 const fs=require('node:fs');
+const vm=require('node:vm');
 const source=fs.readFileSync('app/src/main/assets/index.html','utf8');
 const bridge=String.raw`<script>
 window.Native={load:()=> '[]',save:s=>{window.lastSaved=s;return true;},accent:()=> '#FF5252',setAccent:()=>{},checkUpdate:()=>{},cloudLinked:()=>'',spell:()=>{},exitApp:()=>{},pickImage:()=>{},openLink:()=>{}};
@@ -13,7 +14,7 @@ const checks=String.raw`<script>
   $('newNote').click();editor.innerHTML='<div>Тест редактора</div>';const text=editor.firstChild.firstChild;place(text,0,4);$('formatToggle').click();$('fontSize').click();
   assert($('choiceDialog').open,'Size dialog missing');assert($('choiceTitle').textContent==='Размер текста','Size title');
   $('choiceList').children[4].click();await tick();assert(/font|font-size/i.test(editor.innerHTML),'Size not applied');
-  place(editor.firstChild,editor.firstChild.childNodes.length,editor.firstChild.childNodes.length);
+  place(editor,editor.childNodes.length,editor.childNodes.length);
   document.querySelector('[data-group="insert"]').click();document.querySelector('[data-extra="table"]').click();
   assert($('tableDialog').open,'Table modal missing');$('tableRows').value='2';$('tableCols').value='3';$('tableRows').dispatchEvent(new Event('input'));$('tableApply').click();await tick();
   const table=editor.querySelector('table');assert(table&&table.rows.length===2&&table.rows[0].cells.length===3,'Table insertion failed');
@@ -26,4 +27,13 @@ const checks=String.raw`<script>
  }catch(e){result.dataset.result='fail';result.textContent=String(e&&e.stack||e);}
 })();
 </script>`;
-fs.writeFileSync(process.argv[2],source.replace('<script>',bridge+'<script>').replace('</body>',checks+'</body>'));
+// The editor's HTML export includes a literal </body> inside its JS.
+// Inject at the actual document boundary, never inside the application script.
+const bodyEnd=source.lastIndexOf('</body>');
+if(bodyEnd<0)throw Error('Document body closing tag missing');
+const doc=source.slice(0,bodyEnd)+checks+source.slice(bodyEnd);
+const output=doc.replace('<script>',()=>bridge+'<script>');
+const scripts=[...output.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+if(scripts.length!==3)throw Error('Expected bridge, app, and test scripts; got '+scripts.length);
+for(const script of scripts)new vm.Script(script[1]);
+fs.writeFileSync(process.argv[2],output);
