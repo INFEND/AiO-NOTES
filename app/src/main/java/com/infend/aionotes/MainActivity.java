@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
         web.getSettings().setAllowContentAccess(false);
         web.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         web.addJavascriptInterface(new Bridge(),"Native");
+        web.setWebChromeClient(new WebChromeClient());
         web.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r){return true;}
             @Override public boolean shouldOverrideUrlLoading(WebView v,String u){return true;}
@@ -81,7 +82,7 @@ public class MainActivity extends Activity {
         if(code==EXPORT)i.putExtra(Intent.EXTRA_TITLE,"AiO-NOTES-backup.json");
         startActivityForResult(i,code);
     }
-    class Bridge{
+    public class Bridge{
         @JavascriptInterface public String load(){return loadNotes();}
         @JavascriptInterface public boolean save(String s){return saveNotes(s);}
         @JavascriptInterface public String accent(){return getPreferences(0).getString("accent","#80D8FF");}
@@ -172,5 +173,6 @@ public class MainActivity extends Activity {
         }catch(Exception e){message("Не удалось обработать файл");}});
     }
     @Override public void onBackPressed(){web.evaluateJavascript("window.handleBack()",null);}
+    @Override protected void onPause(){if(web!=null)web.evaluateJavascript("if(window.flushNotes)window.flushNotes()",null);super.onPause();}
     @Override protected void onDestroy(){for(SpellCheckerSession s:sessions.values())s.close();io.shutdown();super.onDestroy();}
 }
