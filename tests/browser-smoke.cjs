@@ -7,7 +7,8 @@ window.Native={load:()=> '[]',save:s=>{window.lastSaved=s;return true;},accent:(
 const checks=String.raw`<script>
 (async()=>{
  const result=document.createElement('pre');result.id='smokeResult';document.body.append(result);
- const tick=()=>new Promise(r=>setTimeout(r,80));
+ const tick=()=>new Promise(r=>setTimeout(r,120));
+ const errors=[];window.addEventListener('error',e=>errors.push(e.message));window.addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
  const assert=(ok,msg)=>{if(!ok)throw Error(msg);};
  function place(node,start,end){editor.focus();const r=document.createRange();r.setStart(node,start);r.setEnd(node,end);const s=getSelection();s.removeAllRanges();s.addRange(r);capture();}
  try{
@@ -20,12 +21,12 @@ const checks=String.raw`<script>
   const table=editor.querySelector('table');assert(table&&table.rows.length===2&&table.rows[0].cells.length===3,'Table insertion failed: '+editor.innerHTML.slice(0,700));
   const cell=table.rows[1].cells[1];place(cell,0,0);cell.dispatchEvent(new MouseEvent('click',{bubbles:true}));assert(!$('tableTools').hidden,'Table context missing');
   $('tableDelete').click();assert($('confirmDialog').open,'Delete confirmation missing');$('confirmCancel').click();await tick();assert(editor.contains(table),'Cancel deleted table');
-  place(cell,0,0);$('tableDelete').click();$('confirmApply').click();await tick();assert(!editor.querySelector('table'),'Table delete failed');assert(editor.textContent.includes('Тест редактора'),'Nearby text lost');
+  place(cell,0,0);assert(activeTable===table,'Table lost after cancel');$('tableDelete').click();assert($('confirmDialog').open,'Second delete confirmation missing');$('confirmApply').click();await tick();assert(!editor.querySelector('table'),'Table delete failed: '+errors.join('; ')+' / '+$('saveStatus').textContent+' / '+$('toast').textContent);assert(editor.textContent.includes('Тест редактора'),'Nearby text lost');
   saveCurrent();assert(!JSON.parse(window.lastSaved).find(n=>n.id===current.id).html.includes('<table>'),'Deleted table persisted');
   place(editor,editor.childNodes.length,editor.childNodes.length);document.querySelector('[data-extra="table"]').click();$('tableCancel').click();await tick();assert(!editor.querySelector('table'),'Cancelled table inserted');
   let p=dialog('Адрес','https://','url');$('dialogCancel').click();assert(await p===null,'Invalid URL cancel failed');
   result.dataset.result='pass';result.textContent='Editor browser smoke tests passed';
- }catch(e){result.dataset.result='fail';result.textContent=String(e&&e.stack||e);}
+ }catch(e){result.dataset.result='fail';result.textContent=String(e&&e.stack||e)+' / '+errors.join('; ');}
 })();
 </script>`;
 // The editor's HTML export includes a literal </body> inside its JS.
