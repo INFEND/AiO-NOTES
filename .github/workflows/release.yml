@@ -48,6 +48,19 @@ jobs:
           echo "AIO_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
       - name: Editor regression tests
         run: node --test tests/editor.test.cjs
+      - name: Browser editor smoke test
+        shell: bash
+        run: |
+          set -eu
+          BROWSER=$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)
+          if [ -z "$BROWSER" ]; then echo "::warning::No Chromium browser on runner; browser smoke test skipped"; exit 0; fi
+          node tests/browser-smoke.cjs "$RUNNER_TEMP/aio-editor-smoke.html"
+          "$BROWSER" --headless --no-sandbox --disable-dev-shm-usage --disable-gpu --virtual-time-budget=10000 --dump-dom "file://$RUNNER_TEMP/aio-editor-smoke.html" > "$RUNNER_TEMP/aio-editor-smoke-result.html" 2> "$RUNNER_TEMP/aio-editor-smoke.log"
+          if ! grep -q '<pre id="smokeResult" data-result="pass">' "$RUNNER_TEMP/aio-editor-smoke-result.html"; then
+            grep -o '<pre id="smokeResult"[^>]*>[^<]*' "$RUNNER_TEMP/aio-editor-smoke-result.html" || true
+            tail -20 "$RUNNER_TEMP/aio-editor-smoke.log"
+            exit 1
+          fi
       - name: Build
         run: gradle --no-daemon :app:assembleRelease -PreleaseCode="$GITHUB_RUN_NUMBER" -PreleaseName="1.0.$GITHUB_RUN_NUMBER"
       - name: Verify and prepare OTA
