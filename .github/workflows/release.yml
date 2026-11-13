@@ -46,6 +46,8 @@ jobs:
           echo "::add-mask::$PASSWORD"
           echo "AIO_KEYSTORE=$RUNNER_TEMP/aio-sign/release.p12" >> "$GITHUB_ENV"
           echo "AIO_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+      - name: Editor regression tests
+        run: node --test tests/editor.test.cjs
       - name: Build
         run: gradle --no-daemon :app:assembleRelease -PreleaseCode="$GITHUB_RUN_NUMBER" -PreleaseName="1.0.$GITHUB_RUN_NUMBER"
       - name: Verify and prepare OTA
