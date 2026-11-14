@@ -102,6 +102,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface public boolean save(String s){return saveNotes(s);}
         @JavascriptInterface public String accent(){return getPreferences(0).getString("accent","#80D8FF");}
         @JavascriptInterface public void setAccent(String s){getPreferences(0).edit().putString("accent",s).apply();}
+        @JavascriptInterface public String formatMode(){return getPreferences(0).getString("formatMode","both");}
+        @JavascriptInterface public void setFormatMode(String mode){if("icons".equals(mode)||"text".equals(mode)||"both".equals(mode))getPreferences(0).edit().putString("formatMode",mode).apply();}
+        @JavascriptInterface public String toolColor(String kind){return getPreferences(0).getString("toolColor_"+kind,"marker".equals(kind)?"#FFEB3B":"#FFFFFF");}
+        @JavascriptInterface public void setToolColor(String kind,String color){if(("text".equals(kind)||"marker".equals(kind))&&color!=null&&color.matches("#[0-9A-Fa-f]{6}"))getPreferences(0).edit().putString("toolColor_"+kind,color).apply();}
         @JavascriptInterface public void pickImage(){runOnUiThread(()->picker(IMAGE,"image/*"));}
         @JavascriptInterface public void exportNotes(String s){runOnUiThread(()->{pendingExport=s;exportMime="application/json";exportName="AiO-NOTES-backup.json";picker(EXPORT,exportMime);});}
         @JavascriptInterface public void exportDocument(String s,String kind){runOnUiThread(()->{
@@ -244,9 +248,16 @@ public class MainActivity extends Activity {
                 startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+getPackageName())));
                 message("Разрешите установку приложений, затем нажмите «Установить» повторно.");return;
             }
-            Intent i=new Intent(Intent.ACTION_VIEW);i.setDataAndType(FileProvider.getUriForFile(this,getPackageName()+".files",apk),"application/vnd.android.package-archive");
-            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(i);
+            Uri content=FileProvider.getUriForFile(this,getPackageName()+".files",apk);
+            Intent i=new Intent(Intent.ACTION_VIEW);i.setDataAndType(content,"application/vnd.android.package-archive");
+            i.setClipData(android.content.ClipData.newRawUri("AiO NOTES",content));
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_ACTIVITY_NEW_TASK);
+            getApplicationContext().startActivity(i);
         }catch(Exception e){message("Не удалось открыть установщик");}
+    }
+    @Override protected void onNewIntent(Intent intent){
+        super.onNewIntent(intent);setIntent(intent);
+        if(intent!=null&&Intent.ACTION_MAIN.equals(intent.getAction())&&intent.hasCategory(Intent.CATEGORY_LAUNCHER)&&web!=null){web.evaluateJavascript("if(window.onLauncherOpen)window.onLauncherOpen()",null);}
     }
     @Override protected void onActivityResult(int code,int result,Intent data){
         super.onActivityResult(code,result,data);if(result!=RESULT_OK||data==null||data.getData()==null)return;

@@ -71,7 +71,19 @@ test('table deletion is explicit, scoped and saves after removal',()=>{
  assert.match(js,/capture\(\);dirty\(\);saveCurrent\(\);return true/);
 });
 test('modal focus does not overwrite saved editor selection; save failure remains visible',()=>{
- assert.match(js,/function capture\(\)\{if\(document.querySelector\('dialog\[open\]'\)\)return/);
+ assert.match(js,/function capture\(\)\{if\(document.querySelector\('dialog\[open\]'\)\|\|selectionLocked\)return/);
  assert.match(js,/if\(saveFailed\)persist\(\)/);
  assert.match(js,/current.id===pendingImageNote/);
+});
+
+test('color, marker and mono have selection-aware state and persistence',()=>{
+ for(const name of ['applyInlineRange','isolateInline','refreshInlineTools','inlineBookmark','pickColor','setFormatMode'])assert.match(js,new RegExp('function '+name+'\\('));
+ assert.match(html,/id="colorClear"/);assert.match(js,/clear.onclick=\(\)=>finish\('none'\)/);
+ assert.match(js,/applyInlineRange\('marker',v,b.range,b.noteId\)/);
+ assert.match(js,/applyInlineRange\('color',v,b.range,b.noteId\)/);
+ assert.match(js,/applyInlineRange\('mono',!active,b.range,b.noteId\)/);
+ for(const mode of ['icons','text','both'])assert.match(html,new RegExp('data-mode="'+mode+'"'));
+ const java=fs.readFileSync('app/src/main/java/com/infend/aionotes/MainActivity.java','utf8');
+ for(const fragment of ['public String formatMode()','public void setFormatMode','public String toolColor','public void setToolColor','FLAG_ACTIVITY_NEW_TASK','ClipData.newRawUri','getApplicationContext().startActivity(i)','void onNewIntent'])assert.ok(java.includes(fragment),fragment);
+ const manifest=fs.readFileSync('app/src/main/AndroidManifest.xml','utf8');assert.match(manifest,/android:launchMode="singleTop"/);
 });

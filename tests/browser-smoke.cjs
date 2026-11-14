@@ -2,7 +2,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('app/src/main/assets/index.html','utf8');
 const bridge=String.raw`<script>
-window.Native={load:()=> '[]',save:s=>{window.lastSaved=s;return true;},accent:()=> '#FF5252',setAccent:()=>{},checkUpdate:()=>{},cloudLinked:()=>'',spell:()=>{},exitApp:()=>{},pickImage:()=>{},openLink:()=>{}};
+window.Native={load:()=> '[]',save:s=>{window.lastSaved=s;return true;},accent:()=> '#FF5252',setAccent:()=>{},formatMode:()=> 'both',setFormatMode:v=>{window.testMode=v},toolColor:k=>k==='marker'?'#FFEB3B':'#FFFFFF',setToolColor:(k,v)=>{window.testToolColor=v},checkUpdate:()=>{},cloudLinked:()=>'',spell:()=>{},exitApp:()=>{},pickImage:()=>{},openLink:()=>{}};
 </script>`;
 const checks=String.raw`<script>
 (async()=>{
@@ -25,6 +25,16 @@ const checks=String.raw`<script>
   saveCurrent();assert(!JSON.parse(window.lastSaved).find(n=>n.id===current.id).html.includes('<table>'),'Deleted table persisted');
   place(editor,editor.childNodes.length,editor.childNodes.length);document.querySelector('[data-extra="table"]').click();$('tableCancel').click();await tick();assert(!editor.querySelector('table'),'Cancelled table inserted');
   let p=dialog('Адрес','https://','url');$('dialogCancel').click();assert(await p===null,'Invalid URL cancel failed');
+  editor.innerHTML='<div>ABC DEF</div>';savedRange=null;typingStyles={};place(editor.firstChild.firstChild,0,3);document.querySelector('[data-group="text"]').click();
+  const color=document.querySelector('[data-act="color"]'),mark=document.querySelector('[data-extra="mark"]'),mono=document.querySelector('[data-act="mono"]');
+  color.click();assert($('colorDialog').open,'Color dialog missing');$('colorHex').value='#FF0000';$('colorApply').click();await tick();
+  let a=editor.querySelector('span');assert(a&&a.textContent==='ABC'&&rgbHex(getComputedStyle(a).color)==='#FF0000','Text color not applied: '+editor.innerHTML);assert(color.style.getPropertyValue('--tool-color')==='#FF0000'&&color.classList.contains('active'),'Color indicator failed');
+  place(a.firstChild,0,3);mark.click();$('colorHex').value='#00FF00';$('colorApply').click();await tick();
+  let highlighted=[...editor.querySelectorAll('span')].find(s=>rgbHex(getComputedStyle(s).backgroundColor)==='#00FF00');assert(highlighted&&highlighted.textContent==='ABC','Marker failed: '+editor.innerHTML);assert(mark.classList.contains('active')&&mark.style.getPropertyValue('--tool-color')==='#00FF00','Marker indicator failed');
+  const t=highlighted.firstChild;place(t,1,2);mark.click();$('colorClear').click();await tick();const walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT);let node,found=[];while(node=walker.nextNode())if(['A','B','C'].includes(node.data))found.push([node.data,styleAt(node).marker]);assert(found.some(v=>v[0]==='A'&&v[1]==='#00FF00')&&found.some(v=>v[0]==='B'&&!v[1])&&found.some(v=>v[0]==='C'&&v[1]==='#00FF00'),'Partial marker clear failed: '+editor.innerHTML+' '+JSON.stringify(found));assert(!mark.classList.contains('active'),'Marker active after clear');
+  let target;const tw=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT);while(node=tw.nextNode())if(node.data==='B'){target=node;break;}place(target,0,1);mono.click();await tick();assert(mono.classList.contains('active'),'Mono not active');mono.click();await tick();assert(!mono.classList.contains('active'),'Mono not disabled');
+  setFormatMode('icons');assert($('toolbar').dataset.mode==='icons'&&window.testMode==='icons','Icons mode');setFormatMode('text');assert($('toolbar').dataset.mode==='text','Text mode');setFormatMode('both');assert($('toolbar').dataset.mode==='both','Both mode');
+  saveCurrent();const saved=JSON.parse(window.lastSaved).find(n=>n.id===current.id).html;assert(saved.includes('background-color')&&saved.includes('color:'),'Colors not persisted');
   result.dataset.result='pass';result.textContent='Editor browser smoke tests passed';
  }catch(e){result.dataset.result='fail';result.textContent=String(e&&e.stack||e)+' / '+errors.join('; ');}
 })();
